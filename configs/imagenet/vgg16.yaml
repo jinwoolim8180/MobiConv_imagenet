@@ -1,7 +1,7 @@
 device: cuda
 dataset:
   name: ImageNet
-  dataset_dir: ~/datasets/ImageNet
+  dataset_dir: ./datasets/ImageNet
   image_size: 224
   n_channels: 3
   n_classes: 1000
