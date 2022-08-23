@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..initializer import create_initializer
+from ..mobiconv import MobiConvBlock
 
 
 class Network(nn.Module):
@@ -15,15 +16,20 @@ class Network(nn.Module):
         n_layers = model_config.n_layers
 
         self.stage1 = self._make_stage(config.dataset.n_channels,
-                                       n_channels[0], n_layers[0])
+                                       n_channels[0], n_layers[0],
+                                       num_pools=0, num_layers=0)
         self.stage2 = self._make_stage(n_channels[0], n_channels[1],
-                                       n_layers[1])
+                                       n_layers[1],
+                                       num_pools=3, num_layers=8)
         self.stage3 = self._make_stage(n_channels[1], n_channels[2],
-                                       n_layers[2])
+                                       n_layers[2],
+                                       num_pools=2, num_layers=16)
         self.stage4 = self._make_stage(n_channels[2], n_channels[3],
-                                       n_layers[3])
+                                       n_layers[3],
+                                       num_pools=1, num_layers=8)
         self.stage5 = self._make_stage(n_channels[3], n_channels[4],
-                                       n_layers[4])
+                                       n_layers[4],
+                                       num_pools=0, num_layers=0)
 
         # compute conv feature size
         with torch.no_grad():
@@ -42,24 +48,28 @@ class Network(nn.Module):
         initializer = create_initializer(config.model.init_mode)
         self.apply(initializer)
 
-    def _make_stage(self, in_channels, out_channels, n_blocks):
+    def _make_stage(self, in_channels, out_channels, n_blocks, num_pools, num_layers):
         stage = nn.Sequential()
         for index in range(n_blocks):
             if index == 0:
-                conv = nn.Conv2d(
+                conv = MobiConvBlock(
                     in_channels,
                     out_channels,
                     kernel_size=3,
                     stride=1,
                     padding=1,
+                    n_pools=num_pools,
+                    n_layers=num_layers
                 )
             else:
-                conv = nn.Conv2d(
+                conv = MobiConvBlock(
                     out_channels,
                     out_channels,
                     kernel_size=3,
                     stride=1,
                     padding=1,
+                    n_pools=num_pools,
+                    n_layers=num_layers
                 )
             stage.add_module(f'conv{index}', conv)
             if self.use_bn:
